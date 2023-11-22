@@ -73,6 +73,7 @@ void screenGotoxy(int x, int y)
     printf("%s[f%s[%dB%s[%dC", ESC, ESC, y, ESC, x);
 }
 
+
 void screenSetColor( screenColor fg, screenColor bg)
 {
     char atr[] = "[0;";

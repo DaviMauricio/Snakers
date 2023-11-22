@@ -1,17 +1,17 @@
 /**
  * screen.h
- * Created on Aug, 23th 2023
- * Author: Tiago Barros
- * Based on "From C to C++ course - 2002"
- * Reference: https://en.wikipedia.org/wiki/ANSI_escape_code
-*/
+ * Criado em 23 de agosto de 2023
+ * Autor: Tiago Barros
+ * Baseado no curso "De C para C++ - 2002"
+ * Referência: https://en.wikipedia.org/wiki/ANSI_escape_code
+ */
 
 #ifndef __SCREEN_H__
 #define __SCREEN_H__
 
 #include <stdio.h>
 
-// Terminal control sequences
+// Sequências de controle do terminal
 #define ESC            "\033"
 #define NORMALTEXT     "[0m"
 #define BOLDTEXT       "[1m"
@@ -23,7 +23,7 @@
 #define HIDECURSOR     "[?25l"
 #define CLEARSCREEN    "[2J"
 
-// BOX Drawing - Unix like terminals
+// Desenhos de caixa - Terminais semelhantes ao Unix
 #define BOX_ENABLE     "(0"
 #define BOX_DISABLE    "(B"
 #define BOX_VLINE      0x78
@@ -42,53 +42,51 @@
 #define BOX_BLOCK      0x61
 #define BOX_DOT        0x7E
 
-// screen constants
-#define SCRSTARTX      3      // Initial and final screen positions for the game
-#define SCRENDX        75     // It means the area that can be drawn 
+// Constantes da tela
+#define SCRSTARTX      3      // Posições iniciais e finais na tela para o jogo
+#define SCRENDX        75     // Significa a área que pode ser desenhada
 #define SCRSTARTY      1
 #define SCRENDY        23
 
-#define MINX           1      // min screen horizontal pos
-#define MINY           1      // min screen vertical pos
-#define MAXX           80     // max screen horizontal pos
-#define MAXY           24     // max screen vertical pos
+#define MINX           1      // Posição mínima horizontal na tela
+#define MINY           1      // Posição mínima vertical na tela
+#define MAXX           80     // Posição máxima horizontal na tela
+#define MAXY           24     // Posição máxima vertical na tela
 
 /**
- * Screen Colors type
-*/
+ * Tipo de cores da tela
+ */
 typedef enum {BLACK, RED, GREEN, BROWN, BLUE, MAGENTA, CYAN, LIGHTGRAY,
         DARKGRAY, LIGHTRED, LIGHTGREEN, YELLOW, LIGHTBLUE, 
-        LIGHTMAGENTA, LIGHTCYAN, WHITE} screenColor; 
-
-
+        LIGHTMAGENTA, LIGHTCYAN, WHITE} screenColor;
 
 /**
- * Move the cursor to position (0,0)
-*/
+ * Mover o cursor para a posição (0,0)
+ */
 static inline void screenHomeCursor()
 {
     printf("%s%s", ESC, HOMECURSOR);
 }
 
 /**
- * Show the cursor
-*/
+ * Mostrar o cursor
+ */
 static inline void screenShowCursor()
 {
     printf("%s%s", ESC, SHOWCURSOR);
 }
 
 /**
- * Hide the cursor
-*/
+ * Esconder o cursor
+ */
 static inline void screenHideCursor()
 {
     printf("%s%s", ESC, HIDECURSOR);
 }
 
 /**
- * Clear the screen
-*/
+ * Limpar a tela
+ */
 static inline void screenClear()
 {
     screenHomeCursor();
@@ -96,86 +94,84 @@ static inline void screenClear()
 }
 
 /**
- * Update screen imediatelly 
-*/
+ * Atualizar a tela imediatamente
+ */
 static inline void screenUpdate() {
     fflush(stdout);
 }
 
 /**
- * Set screen mode to "normal"
-*/
+ * Definir o modo da tela para "normal"
+ */
 static inline void screenSetNormal()
 {
     printf("%s%s", ESC, NORMALTEXT);
 }
 
 /**
- * Set screen mode to "bold"
-*/
+ * Definir o modo da tela para "negrito"
+ */
 static inline void screenSetBold()
 {
     printf("%s%s", ESC, BOLDTEXT);
 }
 
 /**
- * Set screen mode to "blink"
-*/
+ * Definir o modo da tela para "piscar"
+ */
 static inline void screenSetBlink()
 {
     printf("%s%s", ESC, BLINKTEXT);
 }
 
 /**
- * Set screen mode to "reverse"
-*/
+ * Definir o modo da tela para "inverso"
+ */
 static inline void screenSetReverse()
 {
     printf("%s%s", ESC, REVERSETEXT);
 }
 
 /**
- * Enable BOX characters in terminal
-*/
+ * Habilitar caracteres de caixa no terminal
+ */
 static inline void screenBoxEnable()
 {
     printf("%s%s", ESC, BOX_ENABLE);
 }
 
 /**
- * Disable BOX characters in terminal
-*/
+ * Desabilitar caracteres de caixa no terminal
+ */
 static inline void screenBoxDisable()
 {
     printf("%s%s", ESC, BOX_DISABLE);
 }
 
 /**
- * Clear the screen, set cursor to home position
- * and optionally draw borders on it.
- * 
- * @param drawBorders if not zero, draw borders on screen.
-*/
+ * Inicializar a tela, limpar a tela e opcionalmente desenhar bordas.
+ *
+ * @param drawBorders se diferente de zero, desenha bordas na tela.
+ */
 void screenInit(int drawBorders);
 
 /**
- * Clear the screen and restores to initial state.
-*/
+ * Limpar a tela e restaurar para o estado inicial.
+ */
 void screenDestroy();
 
 /**
- * Move cursor to position (x,y)
- * @param x x position
- * @param y y position
- */ 
-
+ * Mover o cursor para a posição (x, y)
+ * @param x posição x
+ * @param y posição y
+ */
 void screenGotoxy(int x, int y);
 
 /**
- * Define text colors 
- * @param fg foreground color, can assume values from BLACK to WHITE
- * @param bg background color, can assume values from BLACK to LIGHTGRAY
-*/
+ * Definir as cores do texto
+ * @param fg cor do primeiro plano, pode assumir valores de BLACK a WHITE
+ * @param bg cor do fundo, pode assumir valores de BLACK a LIGHTGRAY
+ */
 void screenSetColor(screenColor fg, screenColor bg);
 
 #endif /* __SCREEN_H__ */
