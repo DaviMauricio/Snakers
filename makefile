@@ -1,2 +1,2 @@
 all:
-	gcc ./src/*.c -I./include -o teste main.c
+	gcc -o teste main.c

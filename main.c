@@ -1,153 +1,223 @@
 #include <stdio.h>
+#include <string.h>
 #include <stdlib.h>
-#include "screen.h"
-#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 #include <termios.h>
-#include <time.h>
-
-#include "timer.h"
-#include "keyboard.h"
-
-// Constantes do jogo
-#define MAX_SNAKE_SIZE 100
-#define INITIAL_SNAKE_SIZE 5
-#define INITIAL_DELAY 150000
-#define MINX 1
-#define MINY 1
+#include <fcntl.h>
 
 
-// Estrutura que representa a cobra
-typedef struct {
-    int x[MAX_SNAKE_SIZE];
-    int y[MAX_SNAKE_SIZE];
-    int size;
-} Snake;
+int c[300][2] = {0};
+int pontos = 1, cx = 2, cy = 2;
+int comida[2] = {0}, velo = 150;
 
-// Funções do jogo
-void initializeSnake(Snake *snake);
-void drawSnake(Snake *snake);
-void moveSnake(Snake *snake, char direction);
-int checkCollision(Snake *snake);
-void generateFood(int *foodX, int *foodY);
-void drawFood(int foodX, int foodY);
+typedef struct ranking {
+    char nome[25];
+    int pontos;
+    struct ranking *next;
+} ranking;
 
-int main() {
-    // Inicialização das bibliotecas
-    screenInit(1);
-    keyboardInit();
-    timerInit(INITIAL_DELAY);
 
-    // Inicialização do jogo
-    Snake snake;
-    initializeSnake(&snake);
-    char direction = 'd';
-    int foodX, foodY;
-    generateFood(&foodX, &foodY);
-
-    while (1) {
-        // Verifica se uma tecla foi pressionada
-        if (keyhit()) {
-            char key = readch();
-            if (key == 'w' || key == 'a' || key == 's' || key == 'd') {
-                direction = key;
-            }
-        }
-
-        // Move a cobra
-        moveSnake(&snake, direction);
-
-        // Verifica colisão
-        if (checkCollision(&snake)) {
-            screenDestroy();
-            printf("Game Over! Pontuação: %d\n", snake.size - INITIAL_SNAKE_SIZE);
-            break;
-        }
-
-        // Verifica se a cobra comeu a comida
-        if (snake.x[0] == foodX && snake.y[0] == foodY) {
-            snake.size++;
-            generateFood(&foodX, &foodY);
-        }
-
-        // Desenha a cobra e a comida
-        screenClear();
-        drawSnake(&snake);
-        drawFood(foodX, foodY);
-        screenUpdate();
-
-        // Verifica o tempo para controlar a velocidade da cobra
-        if (timerTimeOver()) {
-            usleep(INITIAL_DELAY);
-            timerUpdateTimer(INITIAL_DELAY);
-        }
-    }
-
-    // Finalização das bibliotecas
-    keyboardDestroy();
-    timerDestroy();
-
-    return 0;
+void gotoxy(int x, int y) {
+    printf("\e[%d;%dH", y, x);
 }
 
-void initializeSnake(Snake *snake) {
-    snake->size = INITIAL_SNAKE_SIZE;
-    for (int i = 0; i < snake->size; i++) {
-        snake->x[i] = MAXX / 2 - i;
-        snake->y[i] = MAXY / 2;
+void desenha() {
+    int i;
+    for (i = 0; i < pontos; i++) {
+        gotoxy(c[i][0], c[i][1]);
+        printf("%c", 219);
     }
 }
 
-void drawSnake(Snake *snake) {
-    for (int i = 0; i < snake->size; i++) {
-        screenGotoxy(snake->x[i], snake->y[i]);
-        printf("*");
+void atualiza() {
+    int i;
+    gotoxy(c[pontos][0], c[pontos][1]);
+    printf(" ");
+    for (i = pontos; i >= 0; i--) {
+        c[i + 1][0] = c[i][0];
+        c[i + 1][1] = c[i][1];
     }
 }
 
-void moveSnake(Snake *snake, char direction) {
-    // Move a cabeça
-    for (int i = snake->size - 1; i > 0; i--) {
-        snake->x[i] = snake->x[i - 1];
-        snake->y[i] = snake->y[i - 1];
+int analiza() {
+    int i, retorno = 0;
+    for (i = 1; i < pontos; i++) {
+        if (cx == c[i][0] && cy == c[i][1]) {
+            retorno = 1;
+        }
     }
-
-    // Move a cabeça na direção desejada
-    if (direction == 'w') {
-        snake->y[0]--;
-    } else if (direction == 'a') {
-        snake->x[0]--;
-    } else if (direction == 's') {
-        snake->y[0]++;
-    } else if (direction == 'd') {
-        snake->x[0]++;
-    }
+    return retorno;
 }
 
-int checkCollision(Snake *snake) {
-    // Verifica colisão com as paredes
-    if (snake->x[0] <= MINX || snake->x[0] >= MAXX || snake->y[0] <= MINY || snake->y[0] >= MAXY) {
+void geraComida() {
+    gotoxy(comida[0], comida[1]);
+    printf(" ");
+    srand(time(NULL));
+    do {
+        comida[0] = (rand() % 48) + 1;
+        comida[1] = (rand() % 18) + 1;
+    } while (comida[0] == cx && comida[1] == cy);
+    gotoxy(comida[0], comida[1]);
+    printf("*");
+}
+
+int kbhit() {
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
+
+    ch = getchar();
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if (ch != EOF) {
+        ungetc(ch, stdin);
         return 1;
     }
 
-    // Verifica colisão consigo mesma
-    for (int i = 1; i < snake->size; i++) {
-        if (snake->x[0] == snake->x[i] && snake->y[0] == snake->y[i]) {
-            return 1;
-        }
-    }
-
     return 0;
 }
 
-void generateFood(int *foodX, int *foodY) {
-    // Gera coordenadas aleatórias para a comida
-    srand(time(NULL));
-    *foodX = rand() % (MAXX - MINX) + MINX;
-    *foodY = rand() % (MAXY - MINY) + MINY;
+void addList(ranking **head, ranking *novoRanking ){
+    if (*head == NULL){
+        *head = novoRanking;
+        novoRanking->next = NULL;
+    }else {
+        ranking *n = *head;
+        while(n->next != NULL && n->next->pontos > novoRanking->pontos){
+            n = n->next;
+        }
+
+        novoRanking->next = n->next;
+        n->next = novoRanking;
+    }
 }
 
-void drawFood(int foodX, int foodY) {
-    screenGotoxy(foodX, foodY);
-    printf("#");
+ranking * getRanking(){
+    char nome[25];
+    ranking *novoRanking = malloc(sizeof(ranking));
+
+    printf("Digite seu nome: ");
+    scanf("%s", nome);
+
+    strcpy(novoRanking->nome, nome);
+
+    novoRanking->pontos = pontos;
+
+
+
+    return novoRanking;
+}
+
+void printRanking(ranking *head){
+    for( int i = 1; head != NULL; i++){
+        printf("%d - %s\n", i, head->nome);
+        head = head->next;
+    }
+
+
+}
+
+int main() {
+    int fim = 1;
+    int i, gameover = 0;
+    ranking *head = NULL;
+    int tecla;
+
+
+    while(fim != 0){
+        int gameover = 0;
+
+        printf("\e[2J\e[H");
+
+        for (i = 0; i < 50; i++) { 
+            gotoxy(i, 0);
+            printf("%c", 219);
+            usleep(5000); 
+        }
+        for (i = 0; i < 20; i++) { 
+            gotoxy(50, i);
+            printf("%c", 219);
+            usleep(5000);
+        }
+        for (i = 50; i >= 0; i--) { 
+            gotoxy(i, 20);
+            printf("%c", 219);
+            usleep(5000);
+        }
+        for (i = 20; i > 0; i--) { 
+            gotoxy(0, i);
+            printf("%c", 219);
+            usleep(5000);
+        }
+        geraComida();
+        desenha();
+        tecla = 'd';
+
+        while (gameover == 0) {
+            gotoxy(52, 2);
+            printf("Pontos: %d\t", pontos);
+            gotoxy(52, 4);
+            printf("Velocidade: %.2f caracteres/s", 1000.0 / velo);
+            c[0][0] = cx;
+            c[0][1] = cy;
+
+            if (kbhit()) {
+                tecla = getchar();
+            }
+
+            if (tecla == 'w' || tecla == 'W' || tecla == 72) {
+                cy--;
+                if (cy == 0) break;
+            }
+            if (tecla == 'a' || tecla == 'A' || tecla == 75) {
+                cx--;
+                if (cx == 0) break;
+            }
+            if (tecla == 's' || tecla == 'S' || tecla == 80) {
+                cy++;
+                if (cy == 20) break;
+            }
+            if (tecla == 'd' || tecla == 'D' || tecla == 77) {
+                cx++;
+                if (cx >= 50) break;
+            }
+
+            if (cx == comida[0] && cy == comida[1]) {
+                pontos++;
+                if (velo > 50) velo -= 10;
+                geraComida();
+            }
+            gameover = analiza();
+            atualiza();
+            desenha();
+            usleep(velo * 1000);
+        }
+
+        printf("Você perdeu! Fez %d pontos.\n", pontos);
+
+        ranking *novoRanking = NULL;
+        novoRanking = getRanking();
+        addList(&head,novoRanking);
+        printRanking(head);
+
+
+
+        printf("Pressione Enter para jogar novamente ou zero para sair...");
+        scanf("%d", &fim);
+
+
+
+    }
+
+    return 0;
 }
