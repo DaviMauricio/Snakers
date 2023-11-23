@@ -7,7 +7,7 @@
 
 #include "screen.h"
 
-void screenDrawBorders() 
+void screenDrawBorders() //desenha a borda na interface
 {
     char hbc = BOX_HLINE;
     char vbc = BOX_VLINE;
@@ -48,7 +48,7 @@ void screenDrawBorders()
     
 }
 
-void screenInit(int drawBorders)
+void screenInit(int drawBorders) //inicializa a tela
 {
     screenClear();
     if (drawBorders) screenDrawBorders();
@@ -56,7 +56,7 @@ void screenInit(int drawBorders)
     screenHideCursor();
 }
 
-void screenDestroy()
+void screenDestroy()// limpar/restaurar o estado do terminal
 {
     printf("%s[0;39;49m", ESC); // Reset colors
     screenSetNormal();
@@ -65,7 +65,7 @@ void screenDestroy()
     screenShowCursor();
 }
 
-void screenGotoxy(int x, int y)
+void screenGotoxy(int x, int y) //posiciona o cursor
 {
     x = ( x<0 ? 0 : x>=MAXX ? MAXX-1 : x);
     y = ( y<0 ? 0 : y>MAXY ? MAXY : y);
@@ -74,7 +74,7 @@ void screenGotoxy(int x, int y)
 }
 
 
-void screenSetColor( screenColor fg, screenColor bg)
+void screenSetColor( screenColor fg, screenColor bg) // função define a cor do texto 
 {
     char atr[] = "[0;";
 

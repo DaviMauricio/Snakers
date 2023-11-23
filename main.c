@@ -1,192 +1,158 @@
-#include <string.h>
-#include<stdlib.h> // Para função srand() e system()
-#include<time.h> // Para função rand()
-
-#include "screen.h"
-#include "keyboard.h"
-#include "timer.h"
-
-int x = 34, y = 12;
-int incX = 1, incY = 1;
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+#include <termios.h>
+#include <fcntl.h>
 
 // Variáveis Globais
-int c[300][2], pontos=1, cx=2, cy=2;
-int comida[2], velo=150;
+int c[300][2] = {0};
+int pontos = 1, cx = 2, cy = 2;
+int comida[2] = {0}, velo = 150;
 
-/**void printHello(int nextX, int nextY)
-{
-    // Define a cor do texto como ciano e o fundo como cinza escuro
-    screenSetColor(CYAN, DARKGRAY);
-    
-    // Move o cursor para as coordenadas (x, y) e limpa a área de impressão
-    screenGotoxy(x, y);
-    printf("           ");
-    
-    // Atualiza as novas coordenadas
-    x = nextX;
-    y = nextY;
-    
-    // Move o cursor para as novas coordenadas e imprime "Hello World"
-    screenGotoxy(x, y);
-    printf("Hello World");
+// FUNÇÕES
+void gotoxy(int x, int y) {
+    printf("\e[%d;%dH", y, x);
 }
-*/
 
-void desenha(){ // Desenha a cobrinha
-    screenSetColor(CYAN, DARKGRAY);
+void desenha() {
     int i;
-    for(i=0; i<pontos; i++){
-        screenGotoxy(c[i][0],c[i][1]);
-        printf("%c",219);
+    for (i = 0; i < pontos; i++) {
+        gotoxy(c[i][0], c[i][1]);
+        printf("%c", 219);
     }
 }
 
-void atualiza(){ // Atualiza a posição da cobrinha
+void atualiza() {
     int i;
-    screenGotoxy(c[pontos][0],c[pontos][1]);
+    gotoxy(c[pontos][0], c[pontos][1]);
     printf(" ");
-    for(i=pontos; i>=0; i--){
-        c[i+1][0] = c[i][0];
-        c[i+1][1] = c[i][1];
+    for (i = pontos; i >= 0; i--) {
+        c[i + 1][0] = c[i][0];
+        c[i + 1][1] = c[i][1];
     }
 }
 
-int analiza(){ // Vê se a cobrinha enconstou em seu próprio corpo
-    int i, retorno=0;
-    for(i=1; i<pontos; i++){
-        if(cx==c[i][0] && cy==c[i][1]){
-            retorno=1;
+int analiza() {
+    int i, retorno = 0;
+    for (i = 1; i < pontos; i++) {
+        if (cx == c[i][0] && cy == c[i][1]) {
+            retorno = 1;
         }
     }
     return retorno;
 }
 
-void geraComida(){ // Gera comida em local aleatório
-    screenGotoxy(comida[0],comida[1]);
-    printf("*");
+void geraComida() {
+    gotoxy(comida[0], comida[1]);
+    printf(" ");
     srand(time(NULL));
-    comida[0] = (rand() % 48) +1;
-    comida[1] = (rand() % 18) +1;
-    screenGotoxy(comida[0],comida[1]);
-    printf("%c",4);
+    do {
+        comida[0] = (rand() % 48) + 1;
+        comida[1] = (rand() % 18) + 1;
+    } while (comida[0] == cx && comida[1] == cy);
+    gotoxy(comida[0], comida[1]);
+    printf("*");
 }
 
+// Função para obter entrada de teclado sem bloquear
+int kbhit() {
+    struct termios oldt, newt;
+    int ch;
+    int oldf;
 
-void printKey(int ch)
-{
-    // Define a cor do texto como amarelo e o fundo como cinza escuro
-    screenSetColor(YELLOW, DARKGRAY);
-    
-    // Posiciona o cursor para imprimir o texto "Key code:"
-    screenGotoxy(35, 22);
-    printf("Key code :");
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~(ICANON | ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+    oldf = fcntl(STDIN_FILENO, F_GETFL, 0);
+    fcntl(STDIN_FILENO, F_SETFL, oldf | O_NONBLOCK);
 
-    // Posiciona o cursor para limpar a linha onde será exibido o código da ch
-    screenGotoxy(34, 23);
-    printf("            ");
-    
-    // Posiciona o cursor com base no valor da ch e imprime o código da ch
-    if (ch == 27)
-        screenGotoxy(36, 23);
-    else
-        screenGotoxy(39, 23);
+    ch = getchar();
 
-    printf("%d ", ch);
-    
-    // Aguarda e imprime outros códigos de ch enquanto houver chs pressionadas
-    while (keyhit())
-    {
-        printf("%d ", readch());
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    fcntl(STDIN_FILENO, F_SETFL, oldf);
+
+    if (ch != EOF) {
+        ungetc(ch, stdin);
+        return 1;
     }
+
+    return 0;
 }
 
-int main() 
-{
-    static int ch = 0;
-    int gameover = 0;
-    int tecla = 0;
-    
+int main() {
+    int i, gameover = 0;
+    int tecla;
 
-    // Inicializa a tela com bordas
-    screenInit(1);
-    
-    // Inicializa o chdo e o temporizador
-    keyboardInit();
-    timerInit(50);
+    printf("\e[2J\e[H");
 
-    // Atualiza a tela
-    screenUpdate();
+    for (i = 0; i < 50; i++) { // Linha superior
+        gotoxy(i, 0);
+        printf("%c", 219);
+        usleep(5000); // Pausa execução por 5 milissegundos
+    }
+    for (i = 0; i < 20; i++) { // Coluna da direita
+        gotoxy(50, i);
+        printf("%c", 219);
+        usleep(5000);
+    }
+    for (i = 50; i >= 0; i--) { // Linha inferior
+        gotoxy(i, 20);
+        printf("%c", 219);
+        usleep(5000);
+    }
+    for (i = 20; i > 0; i--) { // Coluna da esquerda
+        gotoxy(0, i);
+        printf("%c", 219);
+        usleep(5000);
+    }
+    geraComida();
+    desenha();
+    tecla = 'd';
 
-    while (ch != 10) // Enter
-    {
-        // Manipula a entrada do usuário
-        if (keyhit()) 
-        {
-            ch = readch();
-            printKey(ch);
-            screenUpdate();
+    while (gameover == 0) {
+        gotoxy(52, 2);
+        printf("Pontos: %d\t", pontos);
+        gotoxy(52, 4);
+        printf("Velocidade: %.2f caracteres/s", 1000.0 / velo);
+        c[0][0] = cx;
+        c[0][1] = cy;
+
+        if (kbhit()) {
+            tecla = getchar();
         }
 
-        // Atualiza o estado do jogo (move elementos, verifica colisões, etc)
-
-            geraComida(); // Gera a primeira comida
-            desenha(); // Desenha a cobra
-            tecla='d';
-
-            while(gameover == 0){
-                screenGotoxy(52,2);
-                printf("Pontos: %d\t",pontos);
-                screenGotoxy(52,4); 
-                printf("Velocidade: %.2d caracteres/s",1000/velo);
-
-                c[0][0]=cx;
-                c[0][1]=cy;
-                
-if(tecla=='w' || tecla=='W' || tecla==72){
+        if (tecla == 'w' || tecla == 'W' || tecla == 72) {
             cy--;
-            if(cy==0) break; // Se a cabeça da cobra estiver na parede superior,
-        }                    // O jogo acaba
-        if(tecla=='a' || tecla=='A' || tecla==75){
+            if (cy == 0) break;
+        }
+        if (tecla == 'a' || tecla == 'A' || tecla == 75) {
             cx--;
-            if(cx==0) break; // Se a cabeça da cobra estiver na parede da esquerda,
-        }                    // O Jogo acaba
-        if(tecla=='s' || tecla=='S' || tecla==80){
+            if (cx == 0) break;
+        }
+        if (tecla == 's' || tecla == 'S' || tecla == 80) {
             cy++;
-            if(cy==20) break; // Se a cabeça da cobra estiver na parede de baixo,
-        }                     // O jogo acaba
-        if(tecla=='d' || tecla=='D' || tecla==77){
+            if (cy == 20) break;
+        }
+        if (tecla == 'd' || tecla == 'D' || tecla == 77) {
             cx++;
-            if(cx>=50) break; // Se a a cabeça da cobra estiver na parede da direida,
-        }                     // O jogo acaba
-                if(cx==comida[0] && cy==comida[1]){ // Se a cobra comer a comida
-                    pontos++;
-                    if(velo>50) velo-=10; // Velocidade em milissegundos abaixa
-                    geraComida();
-                }
+            if (cx >= 50) break;
+        }
 
-
-            
-
-                gameover=analiza();
-                atualiza(); // Atualiza a cobra
-                desenha(); // Desenha a cobra
-                screenGotoxy(50,20);
-
-            // Imprime o código da ch em novas coordenadas
-            printKey(ch);
-            screenUpdate();
-            }
-
-            // Atualiza a tela
-            screenUpdate();
-
-        
+        if (cx == comida[0] && cy == comida[1]) {
+            pontos++;
+            if (velo > 50) velo -= 10;
+            geraComida();
+        }
+        gameover = analiza();
+        atualiza();
+        desenha();
+        usleep(velo * 1000);
     }
 
-    // Libera recursos do chdo, tela e temporizador
-    keyboardDestroy();
-    screenDestroy();
-    timerDestroy();
-
+    printf("Você perdeu! Fez %d pontos.\n", pontos);
+    printf("Pressione Enter para sair...");
+    getchar(); // Espera o usuário pressionar Enter antes de sair
     return 0;
 }
